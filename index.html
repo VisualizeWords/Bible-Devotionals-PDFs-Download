@@ -49,8 +49,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@latest"></script>
 <script>
-    let videoBlob;
-
     document.getElementById('uploadForm').addEventListener('submit', async function(event) {
         event.preventDefault();
         const files = document.getElementById('imageInput').files;
@@ -58,6 +56,7 @@
         preview.innerHTML = '';
         document.getElementById('status').innerText = '';
 
+        // Display images in preview
         const imageUrls = [];
         for (let i = 0; i < files.length; i++) {
             const reader = new FileReader();
@@ -70,8 +69,10 @@
             reader.readAsDataURL(files[i]);
         }
 
-        // Wait for images to be loaded before creating video
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait for images to be displayed
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Create video from images
         await createVideo(imageUrls);
     });
 
@@ -90,11 +91,11 @@
 
         // Create video from images
         await ffmpeg.run('-framerate', '1', '-i', 'image%d.png', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', 'output.mp4');
-        
+
         // Get the video
         const data = ffmpeg.FS('readFile', 'output.mp4');
-        videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
-        
+        const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
+
         // Create a download link
         const downloadUrl = URL.createObjectURL(videoBlob);
         const downloadBtn = document.getElementById('downloadBtn');
