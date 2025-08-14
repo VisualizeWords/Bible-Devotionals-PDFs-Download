@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bible Story Video Creator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+            text-align: center;
+        }
+        #uploadForm {
+            margin: 20px 0;
+        }
+        #preview {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #preview img {
+            width: 100px; /* Thumbnail size */
+            margin: 10px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+        }
+        #downloadBtn {
+            margin-top: 20px;
+            display: none; /* Hidden until video is ready */
+        }
+        #status {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Bible Story Video Creator</h1>
+<form id="uploadForm">
+    <input type="file" id="imageInput" accept="image/*" multiple required>
+    <button type="submit">Create Video</button>
+</form>
+
+<div id="preview"></div>
+<button id="downloadBtn">Download Video</button>
+<div id="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@latest"></script>
+<script>
+    let videoBlob;
+
+    document.getElementById('uploadForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const files = document.getElementById('imageInput').files;
+        const preview = document.getElementById('preview');
+        preview.innerHTML = '';
+        document.getElementById('status').innerText = '';
+
+        const imageUrls = [];
+        for (let i = 0; i < files.length; i++) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                preview.appendChild(img);
+                imageUrls.push(e.target.result);
+            }
+            reader.readAsDataURL(files[i]);
+        }
+
+        // Wait for images to be loaded before creating video
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await createVideo(imageUrls);
+    });
+
+    async function createVideo(imageUrls) {
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+        await ffmpeg.load();
+
+        // Load images into FFmpeg
+        for (let i = 0; i < imageUrls.length; i++) {
+            const response = await fetch(imageUrls[i]);
+            const blob = await response.blob();
+            const fileName = `image${i}.png`;
+            ffmpeg.FS('writeFile', fileName, await fetchFile(blob));
+        }
+
+        // Create video from images
+        await ffmpeg.run('-framerate', '1', '-i', 'image%d.png', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', 'output.mp4');
+        
+        // Get the video
+        const data = ffmpeg.FS('readFile', 'output.mp4');
+        videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
+        
+        // Create a download link
+        const downloadUrl = URL.createObjectURL(videoBlob);
+        const downloadBtn = document.getElementById('downloadBtn');
+        downloadBtn.style.display = 'block';
+        downloadBtn.onclick = function() {
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = 'bible_story_video.mp4';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        document.getElementById('status').innerText = 'Video created successfully!';
+    }
+</script>
+
+</body>
+</html>
