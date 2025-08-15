@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Cinematic Bible Story Generator</title>
 <style>
-    body { margin: 0; overflow: hidden; background: black; color: white; }
+    body { margin: 0; overflow: hidden; background: black; color: white; font-family: sans-serif; }
     #inputBox {
         position: fixed;
         top: 10px; left: 50%; transform: translateX(-50%);
@@ -15,7 +15,7 @@
         text-align: center;
     }
     textarea { width: 400px; height: 80px; }
-    button { padding: 6px 12px; margin-top: 6px; }
+    button { padding: 6px 12px; margin-top: 6px; margin-right: 4px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -23,6 +23,9 @@
 <div id="inputBox">
     <textarea id="story" placeholder="Enter Bible story text here..."></textarea><br>
     <button onclick="startStory()">Play Cinematic</button>
+    <button onclick="downloadScreenshot()">Download Image</button>
+    <button onclick="startRecording()">Start Recording</button>
+    <button onclick="stopRecording()">Stop & Download Video</button>
 </div>
 
 <!-- Three.js core -->
@@ -42,6 +45,7 @@
 let scene, camera, renderer, composer, textMesh, backgroundMesh;
 let clock = new THREE.Clock();
 let fadeInOpacity = 0;
+let recorder, recordedChunks = [];
 
 init();
 
@@ -123,6 +127,45 @@ function startStory() {
     });
 }
 
+// Screenshot download
+function downloadScreenshot() {
+    const link = document.createElement('a');
+    link.download = 'cinematic_story.png';
+    link.href = renderer.domElement.toDataURL('image/png');
+    link.click();
+}
+
+// Video recording
+function startRecording() {
+    recordedChunks = [];
+    const stream = renderer.domElement.captureStream(30); // 30 FPS
+    recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+    recorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    recorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'cinematic_story.webm';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    recorder.start();
+    console.log('Recording started...');
+}
+
+function stopRecording() {
+    if (recorder && recorder.state !== 'inactive') {
+        recorder.stop();
+        console.log('Recording stopped, saving file...');
+    }
+}
+
 function animate() {
     requestAnimationFrame(animate);
 
@@ -130,7 +173,7 @@ function animate() {
 
     // Animate background slowly
     if (backgroundMesh && backgroundMesh.material.map) {
-        backgroundMesh.material.map.offset.x += delta * 0.005; // slow drift
+        backgroundMesh.material.map.offset.x += delta * 0.005;
     }
 
     // Camera cinematic pan
