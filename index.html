@@ -1,96 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Multiple Scenes Video</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  #videoPreview { width: 100%; max-width: 600px; margin-top: 20px; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Image and Video Upload</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+    }
+    form {
+      margin-bottom: 20px;
+    }
+    .preview {
+      margin-top: 20px;
+    }
+    img, video {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
 
-<h1>Generate Multi-Scene Video with Backgrounds and Text</h1>
-<button id="generateBtn">Create Video</button>
-<br/><br/>
-<video id="videoPreview" controls></video>
-<br/>
-<a id="downloadLink" style="display:none;">Download Video</a>
+<h1>Upload Image and Video</h1>
 
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.1/dist/ffmpeg.min.js"></script>
+<form id="uploadForm">
+  <label for="imageInput">Select Image:</label><br/>
+  <input type="file" id="imageInput" accept="image/*" required/><br/><br/>
+  
+  <label for="videoInput">Select Video:</label><br/>
+  <input type="file" id="videoInput" accept="video/*" required/><br/><br/>
+  
+  <button type="submit">Upload and Preview</button>
+</form>
+
+<div class="preview">
+  <h2>Image Preview:</h2>
+  <img id="imagePreview" src="#" alt="Image Preview" style="display:none;"/>
+
+  <h2>Video Preview:</h2>
+  <video id="videoPreview" controls style="display:none;"></video>
+</div>
+
 <script>
-const { createFFmpeg } = FFmpeg;
-const ffmpeg = createFFmpeg({ log: true });
-const generateBtn = document.getElementById('generateBtn');
-const videoPreview = document.getElementById('videoPreview');
-const downloadLink = document.getElementById('downloadLink');
+  document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
 
-generateBtn.onclick = async () => {
-  if (!ffmpeg.isLoaded()) await ffmpeg.load();
+    const imageFile = document.getElementById('imageInput').files[0];
+    const videoFile = document.getElementById('videoInput').files[0];
 
-  // Prepare background images (using generated color videos)
-  // For demo, we'll generate colored backgrounds as separate video clips
-  const backgrounds = [
-    { color: 'red', duration: 3, filename: 'bg1.mp4' },
-    { color: 'blue', duration: 3, filename: 'bg2.mp4' },
-    { color: 'green', duration: 3, filename: 'bg3.mp4' }
-  ];
+    if (imageFile) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = document.getElementById('imagePreview');
+        img.src = e.target.result;
+        img.style.display = 'block';
+      }
+      reader.readAsDataURL(imageFile);
+    }
 
-  for (const bg of backgrounds) {
-    await ffmpeg.run(
-      '-f', 'lavfi',
-      '-i', `color=c=${bg.color}:s=640x360:d=${bg.duration}`,
-      '-vf', `format=yuv420p`,
-      '-t', `${bg.duration}`,
-      bg.filename
-    );
-  }
-
-  // Add text overlays to each background
-  const texts = [
-    'Prophet Elijah confronts Ahab',
-    'The showdown begins',
-    'Divine victory'
-  ];
-
-  for (let i = 0; i < backgrounds.length; i++) {
-    const filename = backgrounds[i].filename;
-    const text = texts[i];
-    await ffmpeg.run(
-      '-i', filename,
-      '-vf', `drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${text}':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=h-50`,
-      '-t', `${backgrounds[i].duration}`,
-      `scene${i+1}.mp4`
-    );
-  }
-
-  // Concatenate the scenes
-  // First, create a file list for ffmpeg
-  const concatFileContent = backgrounds.map((_, i) => `file 'scene${i+1}.mp4'`).join('\n');
-  ffmpeg.FS('writeFile', 'filelist.txt', concatFileContent);
-
-  // Concatenate videos
-  await ffmpeg.run(
-    '-f', 'concat',
-    '-safe', '0',
-    '-i', 'filelist.txt',
-    '-c', 'copy',
-    'final_video.mp4'
-  );
-
-  // Read the final video
-  const data = ffmpeg.FS('readFile', 'final_video.mp4');
-  const blob = new Blob([data.buffer], { type: 'video/mp4' });
-  const url = URL.createObjectURL(blob);
-  videoPreview.src = url;
-
-  // Download link
-  downloadLink.href = url;
-  downloadLink.download = 'story.mp4';
-  downloadLink.style.display = 'block';
-  downloadLink.textContent = 'Download Video';
-};
+    if (videoFile) {
+      const videoURL = URL.createObjectURL(videoFile);
+      const video = document.getElementById('videoPreview');
+      video.src = videoURL;
+      video.style.display = 'block';
+    }
+  });
 </script>
+
 </body>
 </html>
