@@ -1,74 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Image and Video Upload</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-    }
-    form {
-      margin-bottom: 20px;
-    }
-    .preview {
-      margin-top: 20px;
-    }
-    img, video {
-      max-width: 100%;
-      height: auto;
-      display: block;
-      margin-bottom: 20px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bible Story Video Maker</title>
+<style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; }
+    h1 { margin-top: 20px; }
+    input, select, button { margin: 10px; padding: 8px; }
+    canvas { display: none; }
+    video { margin-top: 20px; max-width: 90%; border: 2px solid #333; }
+</style>
 </head>
 <body>
 
-<h1>Upload Image and Video</h1>
+<h1>📖 Bible Story Video Maker</h1>
+<input type="file" id="imageUpload" accept="image/*" multiple>
+<br>
+<label>Zoom:</label>
+<select id="zoomType">
+    <option value="in">Zoom In</option>
+    <option value="out">Zoom Out</option>
+</select>
+<label>Duration (seconds):</label>
+<input type="number" id="duration" min="5" max="10" value="5">
+<br>
+<button id="previewBtn">Preview Video</button>
+<button id="downloadBtn" disabled>Download Video</button>
+<br>
+<video id="videoPreview" controls></video>
+<canvas id="canvas"></canvas>
 
-<form id="uploadForm">
-  <label for="imageInput">Select Image:</label><br/>
-  <input type="file" id="imageInput" accept="image/*" required/><br/><br/>
-  
-  <label for="videoInput">Select Video:</label><br/>
-  <input type="file" id="videoInput" accept="video/*" required/><br/><br/>
-  
-  <button type="submit">Upload and Preview</button>
-</form>
-
-<div class="preview">
-  <h2>Image Preview:</h2>
-  <img id="imagePreview" src="#" alt="Image Preview" style="display:none;"/>
-
-  <h2>Video Preview:</h2>
-  <video id="videoPreview" controls style="display:none;"></video>
-</div>
-
+<!-- ffmpeg.wasm CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 <script>
-  document.getElementById('uploadForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+const upload = document.getElementById('imageUpload');
+const zoomType = document.getElementById('zoomType');
+const durationInput = document.getElementById('duration');
+const previewBtn = document.getElementById('previewBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const videoPreview = document.getElementById('videoPreview');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
-    const imageFile = document.getElementById('imageInput').files[0];
-    const videoFile = document.getElementById('videoInput').files[0];
+async function createVideo(images, zoom, duration) {
+    canvas.width = 1280;
+    canvas.height = 720;
+    const fps = 30;
+    const totalFrames = duration * fps;
 
-    if (imageFile) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = document.getElementById('imagePreview');
-        img.src = e.target.result;
-        img.style.display = 'block';
-      }
-      reader.readAsDataURL(imageFile);
+    // Draw frames
+    const frames = [];
+    for (let i = 0; i < images.length; i++) {
+        const img = await loadImage(images[i]);
+        for (let f = 0; f < totalFrames; f++) {
+            const progress = f / totalFrames;
+            const scale = zoom === 'in' ? 1 + progress * 0.1 : 1.1 - progress * 0.1;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const w = img.width * scale;
+            const h = img.height * scale;
+            ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+            frames.push(canvas.toDataURL('image/png'));
+        }
     }
+    return frames;
+}
 
-    if (videoFile) {
-      const videoURL = URL.createObjectURL(videoFile);
-      const video = document.getElementById('videoPreview');
-      video.src = videoURL;
-      video.style.display = 'block';
+function loadImage(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+previewBtn.onclick = async () => {
+    if (!upload.files.length) {
+        alert("Please upload at least one image.");
+        return;
     }
-  });
+    const frames = await createVideo([...upload.files], zoomType.value, parseInt(durationInput.value));
+
+    // Use Whammy to create WebM
+    const video = new Whammy.Video(30);
+    frames.forEach(frame => {
+        const img = new Image();
+        img.src = frame;
+        video.add(img);
+    });
+    const output = video.compile();
+    const url = URL.createObjectURL(output);
+    videoPreview.src = url;
+    downloadBtn.dataset.url = url;
+    downloadBtn.disabled = false;
+};
+
+downloadBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.href = downloadBtn.dataset.url;
+    a.download = 'bible-story-video.webm';
+    a.click();
+};
+
+// Simple WebM encoder
+class Whammy {
+    constructor() { this.frames = []; this.duration = 1000 / 30; }
+    static Video(fps) { const w = new Whammy(); w.duration = 1000 / fps; return w; }
+    add(img) { this.frames.push(img); }
+    compile() { return Whammy.fromImageArray(this.frames, this.duration); }
+    static fromImageArray(images, duration) {
+        return new Blob(images.map(img => dataURItoArrayBuffer(img.src)), { type: 'video/webm' });
+    }
+}
+function dataURItoArrayBuffer(dataURI) {
+    const byteString = atob(dataURI.split(',')[1]);
+    const buffer = new ArrayBuffer(byteString.length);
+    const view = new Uint8Array(buffer);
+    for (let i = 0; i < byteString.length; i++) view[i] = byteString.charCodeAt(i);
+    return buffer;
+}
 </script>
 
 </body>
