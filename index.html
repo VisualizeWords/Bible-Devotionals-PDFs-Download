@@ -2,124 +2,114 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bible Story Video Maker</title>
+<title>Cinematic Bible Story Generator</title>
 <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; }
-    h1 { margin-top: 20px; }
-    input, select, button { margin: 10px; padding: 8px; }
-    canvas { display: none; }
-    video { margin-top: 20px; max-width: 90%; border: 2px solid #333; }
+    body { margin: 0; overflow: hidden; background: black; color: white; }
+    #inputBox {
+        position: fixed;
+        top: 10px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.7);
+        padding: 10px;
+        border-radius: 8px;
+        z-index: 2;
+        text-align: center;
+    }
+    textarea { width: 400px; height: 80px; }
+    button { padding: 6px 12px; margin-top: 6px; }
 </style>
 </head>
 <body>
 
-<h1>📖 Bible Story Video Maker</h1>
-<input type="file" id="imageUpload" accept="image/*" multiple>
-<br>
-<label>Zoom:</label>
-<select id="zoomType">
-    <option value="in">Zoom In</option>
-    <option value="out">Zoom Out</option>
-</select>
-<label>Duration (seconds):</label>
-<input type="number" id="duration" min="5" max="10" value="5">
-<br>
-<button id="previewBtn">Preview Video</button>
-<button id="downloadBtn" disabled>Download Video</button>
-<br>
-<video id="videoPreview" controls></video>
-<canvas id="canvas"></canvas>
+<div id="inputBox">
+    <textarea id="story" placeholder="Enter Bible story text here..."></textarea><br>
+    <button onclick="startStory()">Play Cinematic</button>
+</div>
 
-<!-- ffmpeg.wasm CDN -->
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/jsm/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/jsm/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.0/examples/jsm/postprocessing/UnrealBloomPass.js"></script>
+
 <script>
-const upload = document.getElementById('imageUpload');
-const zoomType = document.getElementById('zoomType');
-const durationInput = document.getElementById('duration');
-const previewBtn = document.getElementById('previewBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const videoPreview = document.getElementById('videoPreview');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+let scene, camera, renderer, composer, textMesh;
+let clock = new THREE.Clock();
 
-async function createVideo(images, zoom, duration) {
-    canvas.width = 1280;
-    canvas.height = 720;
-    const fps = 30;
-    const totalFrames = duration * fps;
+init();
 
-    // Draw frames
-    const frames = [];
-    for (let i = 0; i < images.length; i++) {
-        const img = await loadImage(images[i]);
-        for (let f = 0; f < totalFrames; f++) {
-            const progress = f / totalFrames;
-            const scale = zoom === 'in' ? 1 + progress * 0.1 : 1.1 - progress * 0.1;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const w = img.width * scale;
-            const h = img.height * scale;
-            ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
-            frames.push(canvas.toDataURL('image/png'));
-        }
-    }
-    return frames;
+function init() {
+    scene = new THREE.Scene();
+
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 15);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Cinematic desert-like background
+    const loader = new THREE.TextureLoader();
+    loader.load("https://i.ibb.co/XD1YgH3/desert-sky.jpg", texture => {
+        scene.background = texture;
+    });
+
+    // Light setup
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 10, 7);
+    scene.add(light);
+
+    // Postprocessing (bloom effect)
+    composer = new THREE.EffectComposer(renderer);
+    const renderPass = new THREE.RenderPass(scene, camera);
+    composer.addPass(renderPass);
+
+    const bloomPass = new THREE.UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.8, 0.5, 0.85
+    );
+    composer.addPass(bloomPass);
+
+    window.addEventListener("resize", onWindowResize);
+    animate();
 }
 
-function loadImage(file) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.src = URL.createObjectURL(file);
+function startStory() {
+    if (textMesh) scene.remove(textMesh);
+
+    const storyText = document.getElementById("story").value || 
+        "In the days of King Ahab, Elijah stood before him...";
+    const fontLoader = new THREE.FontLoader();
+    fontLoader.load("https://threejs.org/examples/fonts/helvetiker_regular.typeface.json", font => {
+        const textGeo = new THREE.TextGeometry(storyText, {
+            font: font,
+            size: 0.6,
+            height: 0.05,
+            curveSegments: 12
+        });
+        const textMat = new THREE.MeshStandardMaterial({ color: 0xffcc66, emissive: 0x442200 });
+        textMesh = new THREE.Mesh(textGeo, textMat);
+        textMesh.position.set(-10, 0, 0);
+        scene.add(textMesh);
     });
 }
 
-previewBtn.onclick = async () => {
-    if (!upload.files.length) {
-        alert("Please upload at least one image.");
-        return;
+function animate() {
+    requestAnimationFrame(animate);
+
+    const delta = clock.getDelta();
+    if (textMesh) {
+        textMesh.position.x += delta * 0.5; // smooth scroll
+        textMesh.rotation.y = Math.sin(Date.now() * 0.0005) * 0.1; // cinematic sway
     }
-    const frames = await createVideo([...upload.files], zoomType.value, parseInt(durationInput.value));
 
-    // Use Whammy to create WebM
-    const video = new Whammy.Video(30);
-    frames.forEach(frame => {
-        const img = new Image();
-        img.src = frame;
-        video.add(img);
-    });
-    const output = video.compile();
-    const url = URL.createObjectURL(output);
-    videoPreview.src = url;
-    downloadBtn.dataset.url = url;
-    downloadBtn.disabled = false;
-};
-
-downloadBtn.onclick = () => {
-    const a = document.createElement('a');
-    a.href = downloadBtn.dataset.url;
-    a.download = 'bible-story-video.webm';
-    a.click();
-};
-
-// Simple WebM encoder
-class Whammy {
-    constructor() { this.frames = []; this.duration = 1000 / 30; }
-    static Video(fps) { const w = new Whammy(); w.duration = 1000 / fps; return w; }
-    add(img) { this.frames.push(img); }
-    compile() { return Whammy.fromImageArray(this.frames, this.duration); }
-    static fromImageArray(images, duration) {
-        return new Blob(images.map(img => dataURItoArrayBuffer(img.src)), { type: 'video/webm' });
-    }
+    composer.render();
 }
-function dataURItoArrayBuffer(dataURI) {
-    const byteString = atob(dataURI.split(',')[1]);
-    const buffer = new ArrayBuffer(byteString.length);
-    const view = new Uint8Array(buffer);
-    for (let i = 0; i < byteString.length; i++) view[i] = byteString.charCodeAt(i);
-    return buffer;
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
 }
 </script>
-
 </body>
 </html>
