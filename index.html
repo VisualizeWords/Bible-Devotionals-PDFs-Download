@@ -12,7 +12,7 @@
       padding: 20px;
     }
     .container {
-      max-width: 700px;
+      max-width: 1100px;
       margin: auto;
       background: white;
       padding: 30px;
@@ -31,6 +31,7 @@
     }
     .pdf-list {
       display: grid;
+      grid-template-columns: repeat(3, 1fr); /* always 3 columns */
       gap: 20px;
     }
     .pdf-item {
@@ -39,6 +40,7 @@
       border-radius: 10px;
       text-align: center;
       transition: transform 0.2s ease;
+      background: #fff;
     }
     .pdf-item:hover {
       transform: scale(1.02);
@@ -71,26 +73,28 @@
     <p>Select a devotional to download. Please complete a quick unlock to access each PDF.</p>
     
     <div class="pdf-list">
-      <!-- Devotional 1 -->
+      <!-- Row 1 -->
       <div class="pdf-item">
         <div class="pdf-title">Morning Devotional - Faith & Strength</div>
         <a class="btn" href="YOUR_CPAGRIP_LINK_1" target="_blank">Download PDF</a>
       </div>
-
-      <!-- Devotional 2 -->
       <div class="pdf-item">
         <div class="pdf-title">Evening Devotional - Peace & Reflection</div>
         <a class="btn" href="YOUR_CPAGRIP_LINK_2" target="_blank">Download PDF</a>
       </div>
-
-      <!-- Devotional 3 -->
       <div class="pdf-item">
         <div class="pdf-title">Weekly Bible Study - Book of Psalms</div>
         <a class="btn" href="YOUR_CPAGRIP_LINK_3" target="_blank">Download PDF</a>
       </div>
 
-      <!-- Add More Devotionals as Needed -->
-    </div>
-  </div>
-</body>
-</html>
+      <!-- Row 2 -->
+      <div class="pdf-item">
+        <div class="pdf-title">Daily Devotional - Proverbs Wisdom</div>
+        <a class="btn" href="YOUR_CPAGRIP_LINK_4" target="_blank">Download PDF</a>
+      </div>
+      <div class="pdf-item">
+        <div class="pdf-title">Monthly Devotional - Gospel Reflections</div>
+        <a class="btn" href="YOUR_CPAGRIP_LINK_5" target="_blank">Download PDF</a>
+      </div>
+      <div class="pdf-item">
+        <div class="pdf-title
