@@ -1,69 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Image to Video Converter</title>
-<style>
-  body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-  video, img { max-width: 100%; margin-top: 20px; }
-  button { margin-top: 10px; padding: 10px 20px; font-size: 16px; }
-  #status { margin-top: 15px; font-style: italic; color: #555; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bible Devotionals Library</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9fafb;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #1d3557;
+      margin-bottom: 20px;
+    }
+    p {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #333;
+    }
+    .pdf-list {
+      display: grid;
+      gap: 20px;
+    }
+    .pdf-item {
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      text-align: center;
+      transition: transform 0.2s ease;
+    }
+    .pdf-item:hover {
+      transform: scale(1.02);
+    }
+    .pdf-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      color: #457b9d;
+    }
+    .btn {
+      display: inline-block;
+      padding: 12px 20px;
+      background-color: #457b9d;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      transition: background 0.3s ease;
+    }
+    .btn:hover {
+      background-color: #1d3557;
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h1>Bible Devotionals Library</h1>
+    <p>Select a devotional to download. Please complete a quick unlock to access each PDF.</p>
+    
+    <div class="pdf-list">
+      <!-- Devotional 1 -->
+      <div class="pdf-item">
+        <div class="pdf-title">Morning Devotional - Faith & Strength</div>
+        <a class="btn" href="YOUR_CPAGRIP_LINK_1" target="_blank">Download PDF</a>
+      </div>
 
-<h1>Image to Video Converter</h1>
-<input type="file" id="imageInput" accept="image/*"><br>
-<button id="convertBtn">Convert to Video</button>
-<div id="status"></div>
-<div id="preview"></div>
+      <!-- Devotional 2 -->
+      <div class="pdf-item">
+        <div class="pdf-title">Evening Devotional - Peace & Reflection</div>
+        <a class="btn" href="YOUR_CPAGRIP_LINK_2" target="_blank">Download PDF</a>
+      </div>
 
-<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.2/dist/ffmpeg.min.js"></script>
-<script>
-const { createFFmpeg, fetchFile } = FFmpeg;
-const ffmpeg = createFFmpeg({ log: true });
+      <!-- Devotional 3 -->
+      <div class="pdf-item">
+        <div class="pdf-title">Weekly Bible Study - Book of Psalms</div>
+        <a class="btn" href="YOUR_CPAGRIP_LINK_3" target="_blank">Download PDF</a>
+      </div>
 
-document.getElementById('convertBtn').addEventListener('click', async () => {
-  const fileInput = document.getElementById('imageInput');
-  const statusDiv = document.getElementById('status');
-  const previewDiv = document.getElementById('preview');
-  
-  if (!fileInput.files.length) {
-    alert("Please select an image first!");
-    return;
-  }
-
-  try {
-    statusDiv.textContent = "Loading video tools... please wait.";
-    await ffmpeg.load();
-
-    statusDiv.textContent = "Processing your image into video...";
-    ffmpeg.FS('writeFile', 'input.png', await fetchFile(fileInput.files[0]));
-
-    await ffmpeg.run(
-      '-loop', '1',
-      '-i', 'input.png',
-      '-t', '5',
-      '-vf', 'scale=1280:720',
-      '-r', '30',
-      'output.mp4'
-    );
-
-    const data = ffmpeg.FS('readFile', 'output.mp4');
-    const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
-    const videoUrl = URL.createObjectURL(videoBlob);
-
-    statusDiv.textContent = "Done! Your video is ready.";
-    previewDiv.innerHTML = `
-      <video controls src="${videoUrl}"></video><br>
-      <a href="${videoUrl}" download="output.mp4"><button>Download Video</button></a>
-    `;
-  } catch (err) {
-    console.error(err);
-    statusDiv.textContent = "❌ Something went wrong: " + err.message;
-  }
-});
-</script>
-
+      <!-- Add More Devotionals as Needed -->
+    </div>
+  </div>
 </body>
 </html>
